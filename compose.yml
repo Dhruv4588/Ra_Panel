@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   mongodb:
     image: mongo:7.0
@@ -8,28 +10,55 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: myapp
     volumes:
       - mongodb_data:/data/db
-    command: mongod --auth
+    command: mongod --auth --bind_ip_all
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
     networks:
       - app-network
 
   backend:
-    image: node:20-alpine
-    container_name: backend
+    build: .  # ✅ Use Dockerfile instead of image
+    container_name: ra_panel_backend
+    restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
       - .:/app
-      - /app/node_modules     # ← Fix: Use named volume
+      - /app/node_modules  # ✅ Anonymous volume for node_modules
     working_dir: /app
-    command: sh -c "npm ci && npm run start"  # ← Fix: Remove --only=production for dev
+    command: sh -c "npm ci && npm run dev"  # ✅ dev mode
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy  # ✅ Wait for MongoDB
+      redis:
+        condition: service_healthy
     environment:
-      MONGODB_URI: mongodb://admin:password123@mongodb:27017/myapp?authSource=admin
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/myapp?authSource=admin
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - PORT=3000
+      - JWT_SECRET=your-super-secret-jwt-key-here
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/ra"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   app-network:
@@ -37,4 +66,4 @@ networks:
 
 volumes:
   mongodb_data:
-  node_modules:         # ← Add named volume
+  redis_data:

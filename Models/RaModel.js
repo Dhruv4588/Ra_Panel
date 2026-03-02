@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';  // ✅ Import bcrypt
+import bcrypt from 'bcryptjs';  
 
 const RaSchema = new mongoose.Schema({
   name: {
@@ -16,7 +16,7 @@ const RaSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true,
-    minlength: 8  // ✅ Add minlength
+    minlength: 8  
   },
   isActive: { type: Boolean, default: true },
   role: { type: String, enum: ['ra', 'admin'], default: 'ra' }
@@ -24,7 +24,7 @@ const RaSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// ✅ FIXED: RaSchema hooks (NOT userSchema)
+
 RaSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   

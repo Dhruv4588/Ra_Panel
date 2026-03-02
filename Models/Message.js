@@ -1,8 +1,7 @@
-// models/Message.js
 import mongoose from 'mongoose';
 
 const messageSchema = new mongoose.Schema({
-  // RA who sent the message
+ 
   raId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Ra',
@@ -10,7 +9,7 @@ const messageSchema = new mongoose.Schema({
     index: true
   },
   
-  // Main Community
+ 
   community: {
     type: String,
     enum: ['nifty', 'equity', 'commodities', 'swing'],
@@ -18,24 +17,24 @@ const messageSchema = new mongoose.Schema({
     index: true
   },
   
-  // Sub Community (NF1, NF2, etc.)
+
   subCommunity: {
     type: String,
     enum: [
-      // Nifty
-      'nf1', 'nf2', 'nf3', 'nf4', 'nf5', 'np1', 'np2', 'np3',
-      // Equity  
-      'eq1', 'eq2', 'eq3',
-      // Commodities
-      'gc1', 'gc2', 'sl1', 'sl2',
-      // Swing
-      'sw1', 'sw2', 'sw3'
+      
+      'nf1', 'nf2', 'nf3',  'np1',
+      
+      'eqf1', 'eqf2', 'eqf3','eqp1',
+      
+      'cf1', 'cf2', 'cf3', 'cp1',
+   
+      'stf1', 'stf2', 'stf3','stp1'
     ],
     required: true,
     index: true
   },
   
-  // Message Type
+  
   messageType: {
     type: String,
     enum: ['trade', 'promotional', 'followup', 'flaunt'],
@@ -43,7 +42,7 @@ const messageSchema = new mongoose.Schema({
     index: true
   },
   
-  // Message Content
+ 
   title: {
     type: String,
     required: true,
@@ -57,13 +56,12 @@ const messageSchema = new mongoose.Schema({
     maxlength: 1000
   },
   
-  // Notification Flag (Only 'trade' messages)
+
   isNotification: {
     type: Boolean,
     default: false
   },
   
-  // Stats
   views: {
     type: Number,
     default: 0
@@ -76,7 +74,7 @@ const messageSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes for fast queries
+
 messageSchema.index({ community: 1, subCommunity: 1, createdAt: -1 });
 messageSchema.index({ raId: 1, createdAt: -1 });
 messageSchema.index({ messageType: 1, isNotification: 1 });

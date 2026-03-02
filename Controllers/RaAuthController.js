@@ -16,7 +16,6 @@ export const raLogin = async (req, res) => {
       });
     }
     
-    // Generate JWT
     const token = generateRaToken(ra._id);
     
     res.json({

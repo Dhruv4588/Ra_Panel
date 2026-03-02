@@ -1,21 +1,14 @@
 // controllers/raMessageController.js
 import Message from '../Models/Message.js';  
 import Ra from '../Models/RaModel.js';
+import { notificationQueue } from '../Services/notificationQueue.js';
 
-// ✅ Create Trade Message (RA Panel)
 export const createTradeMessage = async (req, res) => {
   try {
     const { community, subCommunity, title, content } = req.body;
-    const raId = req.ra._id; // ✅ From auth middleware
+    const raId = req.ra._id;
     
-    // Validation
-    if (!['nifty', 'equity', 'commodities', 'swing'].includes(community)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid community' 
-      });
-    }
-    
+    // 1. Save message to MongoDB
     const message = new Message({
       raId,
       community,
@@ -25,24 +18,48 @@ export const createTradeMessage = async (req, res) => {
       content,
       isNotification: true
     });
-    
     await message.save();
     
-    // ✅ Send notifications to subCommunity users
-    await sendPushNotifications(message);
+    // 2. Queue FCM batch notification
+    const job = await notificationQueue.add('sendBatch', {
+      community,
+      subCommunity,
+      title,
+      content,
+      raName: req.ra.name
+    });
+    
+    // 3. WebSocket real-time (immediate)
+    io.to(`${community}_${subCommunity}`).emit('tradeAlert', {
+      messageId: message._id,
+      title,
+      content,
+      raName: req.ra.name
+    });
     
     res.status(201).json({ 
-      success: true, 
-      message: 'Trade alert sent successfully!',
-      data: message 
+      success: true,
+      message: 'Trade alert queued & sent!',
+      data: { 
+        messageId: message._id,
+        queueJobId: job.id,
+        estimatedDelivery: '5-10 seconds'
+      }
     });
   } catch (error) {
-    console.error('Create message error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to create message' 
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
+};
+
+// Queue status
+export const getQueueStatus = async (req, res) => {
+  const jobs = await notificationQueue.getJobs(['waiting', 'active', 'completed']);
+  res.json({ 
+    success: true,
+    queueLength: await notificationQueue.getWaitingCount(),
+    activeJobs: jobs.length,
+    processed: await notificationQueue.getCompletedCount()
+  });
 };
 
 // ✅ Get RA's own messages
