@@ -2,14 +2,52 @@
 import Ra from '../Models/RaModel.js';
 import bcrypt from 'bcryptjs';
 
-export const createRa = async (req, res) => {
+export const createTradeMessage = async (req, res) => {
   try {
-    const hashedPassword = await bcrypt.hash(req.body.password, 12);
-    const ra = new Ra({ ...req.body, password: hashedPassword });
-    await ra.save();
-    res.status(201).json({ success: true, data: ra });
+    const { community, subCommunity, title, content } = req.body;
+    const raId = req.ra._id;
+    
+    // Count users before sending
+    const userCount = await User.countDocuments({
+      'subscribedCommunities': {
+        $elemMatch: { community, subCommunity, notifications: true }
+      }
+    });
+    
+    const message = new Message({
+      raId,
+      community,
+      subCommunity,
+      messageType: 'trade',
+      title,
+      content,
+      isNotification: true,
+      'delivery.totalUsers': userCount
+    });
+    
+    await message.save();
+    
+    // Queue notification with message reference
+    await notificationQueue.add('sendBatch', {
+      messageId: message._id,
+      community,
+      subCommunity,
+      title,
+      content,
+      raName: req.ra.name
+    });
+    
+    res.status(201).json({
+      success: true,
+      message: 'Trade alert sent!',
+      data: {
+        messageId: message._id,
+        reach: userCount,
+        estimatedDelivery: '5-10s'
+      }
+    });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

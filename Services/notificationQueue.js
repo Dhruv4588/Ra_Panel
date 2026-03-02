@@ -53,4 +53,16 @@ notificationQueue.process('sendBatch', 2, async (job) => { // 2 concurrent worke
   
   console.log(`✅ Batch sent: ${response.successCount}/${response.failureCount} FCMs`);
   return { success: response.successCount, failed: response.failureCount };
-});
+}
+
+
+
+
+
+
+
+
+
+
+
+);
